@@ -5,7 +5,7 @@ async function cf(path, method = 'GET', body) {
     headers: { 'x-client-id': cfg.cfAppId, 'x-client-secret': cfg.cfSecret, 'x-api-version': '2025-01-01', 'Content-Type': 'application/json' }
   })
   const j = await r.json().catch(() => ({}))
-  if (!r.ok) throw Object.assign(new Error(j.message || 'Payment gateway error'), { status: 502, cf: r.status })
+  if (!r.ok) { console.error('Cashfree', method, path, r.status, JSON.stringify(j)); throw Object.assign(new Error(j.message || 'Payment gateway error'), { status: 502, cf: r.status }) }
   return j
 }
 // Returns a payable session id (reuses an active Cashfree order, creates one otherwise)
@@ -18,7 +18,9 @@ export async function getSession(order, email) {
   const o = await cf('/orders', 'POST', {
     order_id: order.id, order_amount: Number(order.total), order_currency: 'INR',
     customer_details: { customer_id: order.user_id, customer_name: order.address.name, customer_email: email, customer_phone: String(order.address.phone).replace(/\D/g, '').slice(-10) },
-    order_meta: { return_url: `${cfg.siteUrl}/payment-return?order_id={order_id}`, notify_url: `${cfg.apiUrl}/api/webhooks/cashfree` }
+    order_meta: { return_url: `${cfg.siteUrl}/payment-return?order_id={order_id}`,
+      // webhook is optional (payment is also verified when the customer returns); Cashfree only accepts a public https address
+      ...(cfg.apiUrl.startsWith('https://') ? { notify_url: `${cfg.apiUrl}/api/webhooks/cashfree` } : {}) }
   })
   return o.payment_session_id
 }
