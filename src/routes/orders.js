@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { sb } from '../config.js'
+import { cfg, sb } from '../config.js'
 import { auth, bad, h, myOrder } from '../middleware.js'
 import { getSession, refund, syncPayment } from '../cashfree.js'
 const r = Router()
@@ -10,12 +10,12 @@ r.post('/checkout', h(async (req, res) => {
   const { data: id, error } = await sb.rpc('create_order_for', { p_user: req.user.id, items: items.map(i => ({ id: i.id, qty: i.qty })), address, pay: method })
   if (error) throw bad(error.message)
   const order = (await sb.from('orders').select('*').eq('id', id).single()).data
-  res.json({ orderId: id, sessionId: method === 'online' ? await getSession(order, req.user.email) : null })
+  res.json({ orderId: id, mode: cfg.mode, sessionId: method === 'online' ? await getSession(order, req.user.email) : null })
 }))
 r.post('/orders/:id/pay', h(async (req, res) => {
   const o = await myOrder(req)
   if (o.payment_method !== 'online' || o.payment_status === 'paid' || o.status === 'cancelled') throw bad('This order cannot be paid online')
-  res.json({ sessionId: await getSession(o, req.user.email) })
+  res.json({ mode: cfg.mode, sessionId: await getSession(o, req.user.email) })
 }))
 r.post('/orders/:id/verify', h(async (req, res) => {
   const o = await myOrder(req)
