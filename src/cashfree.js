@@ -18,7 +18,7 @@ export async function getSession(order, email) {
   const o = await cf('/orders', 'POST', {
     order_id: order.id, order_amount: Number(order.total), order_currency: 'INR',
     customer_details: { customer_id: order.user_id, customer_name: order.address.name, customer_email: email, customer_phone: String(order.address.phone).replace(/\D/g, '').slice(-10) },
-    order_meta: { return_url: `${cfg.siteUrl}/payment-return?order_id={order_id}`,
+    order_meta: { return_url: `${cfg.siteUrl}/?order_id={order_id}`,
       // webhook is optional (payment is also verified when the customer returns); Cashfree only accepts a public https address
       ...(cfg.apiUrl.startsWith('https://') ? { notify_url: `${cfg.apiUrl}/api/webhooks/cashfree` } : {}) }
   })
